@@ -1,0 +1,54 @@
+---
+title: "Final_Test_Map"
+author: "Monica Choto"
+date: "2/19/2018"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+library(ggplot2)
+library(ggmap)
+library(rworldmap)
+library(plyr)
+library(dplyr)
+library(plotly)
+```
+
+```{r, message=FALSE, warning=FALSE}
+Food_Inspections <- read_csv("~/Desktop/CSC465/Project/Food_Inspections.csv",skip=1)
+colnames(Food_Inspections)=c("InspectionID","Name","NameDBA","LicenseNo","Type","Risk","Address","City","State","Zip","Date","Inspection_Type","Results","Violations","Latitude","Longitude","Location")
+head(Food_Inspections)
+```
+
+```{r}
+#Counting the number of food inspections per License number and creating a column 
+inspections <- ddply(Food_Inspections, .(LicenseNo), "nrow")
+names(inspections)[2] <- "Total_Inspections"
+Food_Inspections = Food_Inspections %>% distinct(LicenseNo, .keep_all = TRUE) #dumping dups 
+```
+
+```{r} 
+#merging data with total inspections column
+Chicago_I <- merge(Food_Inspections, inspections, by= "LicenseNo")
+head(Chicago_I)
+```
+
+```{r}
+#trimming data to only places with more than a certain number of inspections just for testing purposes
+Chicago_trimmed = subset(Chicago_I, Total_Inspections>20)
+Chicago_trimmed
+```
+
+```{r}
+#doing square root of size just so the sizes aren't ridiculous 
+Total_Inspections_Smaller = Chicago_trimmed$Total_Inspections/10
+map <- get_map(location = 'Chicago', zoom = 11)
+
+#passing map through with sizes based on total locations 
+mapPoints <- ggmap(map) + geom_point(data = Chicago_trimmed,aes(x = Longitude, y = Latitude, colour= Risk,alpha=0.01,size=Total_Inspections_Smaller)) + scale_fill_manual(name="Risk",values=c("red","green"),labels=c("High Risk","Low Risk")) + scale_size("Total Inspections")
+mapPoints + ggtitle("Food Inspections by location (Chicago)")+labs(x="Longitude",y="Latitude")
+
+
+```
+
